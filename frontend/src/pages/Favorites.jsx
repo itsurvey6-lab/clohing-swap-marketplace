@@ -157,7 +157,7 @@ function Favorites() {
 
                     {item.image ? (
                       <img
-                        src={`http://localhost:5000/uploads/${item.image}`}
+                        src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/uploads/${item.image}`}
                         alt={item.title}
                         className="w-full h-80 object-contain bg-stone-100"
                       />

@@ -152,7 +152,7 @@ function ListingDetails() {
 
             {listing.image ? (
               <img
-                src={`http://localhost:5000/uploads/${listing.image}`}
+                src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/uploads/${item.image}`}
                 alt={listing.title}
                 className="w-full h-[600px] object-cover"
               />
