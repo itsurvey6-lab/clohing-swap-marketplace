@@ -103,7 +103,14 @@ io.on("connection", (socket) => {
             );
         }
 
-        socket.join(`swap_${swapRequestId}`);
+        socket.join(`s
+        
+        
+        
+        
+        
+        
+        wap_${swapRequestId}`);
 
         console.log(
             `User joined swap room: ${swapRequestId}`

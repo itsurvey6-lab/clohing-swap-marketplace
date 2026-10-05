@@ -1,7 +1,9 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:5000"
+  // Use the deployed backend when VITE_API_URL is set.
+  // Otherwise, use the local backend during development.
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000"
 });
 
 api.interceptors.request.use((config) => {
