@@ -154,7 +154,7 @@ function ListingDetails() {
               <img
                 src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/uploads/${listing.image}`}
                 alt={listing.title}
-                className="w-full h-[600px] object-cover"
+                className="w-full h-[600px] object-contain bg-stone-100"
               />
             ) : (
               <div className="w-full h-[600px] bg-stone-100 flex items-center justify-center text-gray-400">
