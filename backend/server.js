@@ -1,121 +1,59 @@
 import express from "express";
-import connectDB from "./config/db.js";
-import userRoutes from "./routes/userRoutes.js";
-import listingRoutes from "./routes/listingRoutes.js";
-import swapRequestRoutes from "./routes/swapRequestRoutes.js";
-import authRoutes from "./routes/authRoutes.js";
-import messageRoutes from "./routes/messageRoutes.js";
-import SwapRequest from "./models/swapRequest.js";
-import { Server } from "socket.io";
-import reportRoutes from "./routes/reportRoutes.js";
-import favoriteRoutes from "./routes/favoriteRoutes.js";
 import cors from "cors";
-import swapValueSettingRoutes from "./routes/swapValueSettingRoutes.js";
-import reviewRoutes from "./routes/reviewRoutes.js";
-import adminRoutes from "./routes/adminRoutes.js";
+import { Server } from "socket.io";
+
+// ... your other imports
 
 const app = express();
 
-// Render provides the PORT automatically.
-// 5000 is used when running locally.
 const PORT = process.env.PORT || 5000;
 
-// Frontend URL
-const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://clohing-swap-marketplace.vercel.app"
+];
+
+// CORS configuration
+const corsOptions = {
+    origin: (origin, callback) => {
+
+        // Allow requests without an origin
+        // such as server-to-server requests
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        return callback(
+            new Error("Not allowed by CORS")
+        );
+    },
+
+    methods: [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS"
+    ],
+
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization"
+    ],
+
+    optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
+// Handle browser preflight requests
+app.options(/.*/, cors(corsOptions));
 
 app.use(express.json());
-app.use("/uploads", express.static("uploads"));
 
-app.use(cors({
-    origin: CLIENT_URL
-}));
-
-connectDB();
-
-app.use("/users", userRoutes);
-app.use("/listings", listingRoutes);
-app.use("/swaprequests", swapRequestRoutes);
-app.use("/auth", authRoutes);
-app.use("/messages", messageRoutes);
-app.use("/reports", reportRoutes);
-app.use("/favorites", favoriteRoutes);
-app.use("/reviews", reviewRoutes);
-app.use("/admin", adminRoutes);
-
-app.use(
-    "/swapvalues",
-    swapValueSettingRoutes
-);
-
-// Start server
-const server = app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
-// Socket.IO
-const io = new Server(server, {
-    cors: {
-        origin: CLIENT_URL,
-        methods: ["GET", "POST"]
-    }
-});
-
-io.on("connection", (socket) => {
-
-    socket.on("sendMessage", (data) => {
-
-        const { swapRequestId, message } = data;
-
-        socket.to(`swap_${swapRequestId}`).emit(
-            "receiveMessage",
-            {
-                swapRequestId,
-                message
-            }
-        );
-
-    });
-
-    console.log("User connected:", socket.id);
-
-    socket.on("joinSwapRoom", async (swapRequestId, userId) => {
-
-        const request = await SwapRequest.findById(swapRequestId)
-            .populate("listing");
-
-        if (!request) {
-            return socket.emit(
-                "errorMessage",
-                "Swap request not found"
-            );
-        }
-
-        const requesterId = request.requester.toString();
-        const listingOwnerId = request.listing.owner.toString();
-
-        if (
-            userId !== requesterId &&
-            userId !== listingOwnerId
-        ) {
-            return socket.emit(
-                "errorMessage",
-                "You are not part of this swap"
-            );
-        }
-
-        socket.join(`s
-        
-        
-        
-        
-        
-        
-        wap_${swapRequestId}`);
-
-        console.log(
-            `User joined swap room: ${swapRequestId}`
-        );
-
-    });
-
-});
+// your other middleware/routes below
