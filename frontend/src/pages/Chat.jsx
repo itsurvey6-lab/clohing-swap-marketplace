@@ -168,10 +168,11 @@ function Chat() {
 
         // IMPORTANT:
         // Send the event name + object expected by backend
-        socket.emit("joinSwapRoom", {
+        socket.emit(
+            "joinSwapRoom",
             swapRequestId,
             userId
-        });
+        );
 
         console.log(
             "Joined room:",
