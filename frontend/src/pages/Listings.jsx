@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import api from "../services/api";
 
@@ -10,6 +11,8 @@ import ListingsGrid from "../components/listings/ListingsGrid";
 
 function Listings() {
 
+  const [searchParams] = useSearchParams();
+
   const [listings, setListings] = useState([]);
 
   const [nearbyListings, setNearbyListings] = useState([]);
@@ -18,12 +21,12 @@ function Listings() {
 
   const [search, setSearch] = useState("");
 
-  const [filters, setFilters] = useState({
-    category: "",
-    size: "",
-    condition: "",
-    sort: ""
-  });
+ const [filters, setFilters] = useState({
+  category: searchParams.get("category") || "",
+  size: "",
+  condition: "",
+  sort: ""
+});
 
   const [loading, setLoading] = useState(true);
 
