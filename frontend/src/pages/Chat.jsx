@@ -5,7 +5,6 @@ import { io } from "socket.io-client";
 import api from "../services/api";
 
 function Chat() {
-
     const { swapRequestId } = useParams();
 
     const [messages, setMessages] = useState([]);
@@ -20,7 +19,6 @@ function Chat() {
 
     const messagesEndRef = useRef(null);
 
-
     // GET CURRENT USER ID FROM TOKEN
     const token = localStorage.getItem("token");
 
@@ -28,158 +26,248 @@ function Chat() {
         ? JSON.parse(atob(token.split(".")[1])).userId
         : null;
 
-
     // LOAD CHAT DATA
-    const fetchChatData = async () => {
+    useEffect(() => {
+        const fetchChatData = async () => {
+            try {
+                setLoading(true);
 
-        try {
+                // Load existing messages
+                const messageResponse = await api.get(
+                    `/messages/${swapRequestId}`
+                );
 
-            const messageResponse = await api.get(
-                `/messages/${swapRequestId}`
-            );
+                console.log(
+                    "Messages:",
+                    messageResponse.data
+                );
 
-            console.log(
-                "Messages:",
-                messageResponse.data
-            );
+                setMessages(messageResponse.data);
 
-            setMessages(messageResponse.data);
+                // Load my outgoing requests
+                const myResponse = await api.get(
+                    "/swaprequests/my"
+                );
 
+                // Load my incoming requests
+                const incomingResponse = await api.get(
+                    "/swaprequests/incoming"
+                );
 
-            const myResponse = await api.get(
-                "/swaprequests/my"
-            );
+                const myRequests =
+                    myResponse.data.items ||
+                    myResponse.data ||
+                    [];
 
-            const incomingResponse = await api.get(
-                "/swaprequests/incoming"
-            );
+                const incomingRequests =
+                    incomingResponse.data.items ||
+                    incomingResponse.data ||
+                    [];
 
-
-            const myRequests =
-                myResponse.data.items ||
-                myResponse.data ||
-                [];
-
-
-            const incomingRequests =
-                incomingResponse.data.items ||
-                incomingResponse.data ||
-                [];
-
-
-            const myRequest = myRequests.find(
-                (request) =>
-                    request._id === swapRequestId
-            );
-
-
-            const incomingRequest =
-                incomingRequests.find(
+                // Find this swap request
+                const myRequest = myRequests.find(
                     (request) =>
                         request._id === swapRequestId
                 );
 
+                const incomingRequest =
+                    incomingRequests.find(
+                        (request) =>
+                            request._id === swapRequestId
+                    );
 
-            const request =
-                myRequest ||
-                incomingRequest ||
-                null;
+                const request =
+                    myRequest ||
+                    incomingRequest ||
+                    null;
 
+                console.log(
+                    "Swap request:",
+                    request
+                );
 
+                setSwapRequest(request);
+
+                // If I created the request,
+                // receiver is owner of wanted listing
+                if (myRequest) {
+                    setReceiverId(
+                        request.listing?.owner?._id ||
+                        request.listing?.owner
+                    );
+                }
+
+                // If I received the request,
+                // receiver is the requester
+                if (incomingRequest) {
+                    setReceiverId(
+                        request.requester?._id ||
+                        request.requester
+                    );
+                }
+            } catch (error) {
+                console.log(
+                    "Error loading chat:",
+                    error
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchChatData();
+    }, [swapRequestId]);
+
+    // CONNECT TO SOCKET.IO
+    useEffect(() => {
+        const API_URL =
+            import.meta.env.VITE_API_URL ||
+            "http://localhost:5000";
+
+        const newSocket = io(API_URL);
+
+        setSocket(newSocket);
+
+        newSocket.on("connect", () => {
             console.log(
-                "Swap request:",
-                request
+                "Socket connected:",
+                newSocket.id
             );
+        });
 
-            setSwapRequest(request);
-
-
-            // If I created the request,
-            // receiver is the owner of wanted listing
-            if (myRequest) {
-
-                setReceiverId(
-                    request.listing?.owner?._id ||
-                    request.listing?.owner
-                );
-
-            }
-
-
-            // If I received the request,
-            // receiver is the requester
-            if (incomingRequest) {
-
-                setReceiverId(
-                    request.requester?._id ||
-                    request.requester
-                );
-
-            }
-
-        } catch (error) {
-
+        newSocket.on("connect_error", (error) => {
             console.log(
-                "Error loading chat:",
+                "Socket connection error:",
                 error
             );
+        });
 
-        } finally {
+        return () => {
+            newSocket.disconnect();
+        };
+    }, []);
 
-            setLoading(false);
-
+    // JOIN SOCKET.IO ROOM
+    useEffect(() => {
+        if (!socket || !swapRequest) {
+            return;
         }
 
-    };
+        const token =
+            localStorage.getItem("token");
 
+        if (!token) {
+            return;
+        }
+
+        const payload = JSON.parse(
+            atob(token.split(".")[1])
+        );
+
+        const userId = payload.userId;
+
+        // IMPORTANT:
+        // Send the event name + object expected by backend
+        socket.emit("joinSwapRoom", {
+            swapRequestId,
+            userId
+        });
+
+        console.log(
+            "Joined room:",
+            swapRequestId
+        );
+    }, [
+        socket,
+        swapRequest,
+        swapRequestId
+    ]);
+
+    // RECEIVE REAL-TIME MESSAGE
+    useEffect(() => {
+        if (!socket) {
+            return;
+        }
+
+        const handleReceiveMessage = (data) => {
+            console.log(
+                "New message received:",
+                data
+            );
+
+            const incomingMessage =
+                data?.message || data;
+
+            if (!incomingMessage) {
+                return;
+            }
+
+            setMessages((previousMessages) => {
+                // Prevent duplicate message
+                if (
+                    incomingMessage._id &&
+                    previousMessages.some(
+                        (message) =>
+                            message._id ===
+                            incomingMessage._id
+                    )
+                ) {
+                    return previousMessages;
+                }
+
+                return [
+                    ...previousMessages,
+                    incomingMessage
+                ];
+            });
+        };
+
+        socket.on(
+            "receiveMessage",
+            handleReceiveMessage
+        );
+
+        return () => {
+            socket.off(
+                "receiveMessage",
+                handleReceiveMessage
+            );
+        };
+    }, [socket]);
 
     // SEND MESSAGE
     const sendMessage = async () => {
-
         if (!messageText.trim()) {
             return;
         }
 
-
         if (!receiverId) {
-
             alert("Receiver not found");
-
             return;
-
         }
-
 
         if (!socket) {
-
             alert("Chat connection is not ready");
-
             return;
-
         }
 
-
         try {
-
             // Save message using REST API
             const response = await api.post(
                 "/messages",
                 {
                     receiver: receiverId,
                     swapRequest: swapRequestId,
-                    message: messageText
+                    message: messageText.trim()
                 }
             );
-
 
             console.log(
                 "Message saved:",
                 response.data
             );
 
-
-            // Show message immediately
-            // for the sender
+            // Show message immediately for sender
             setMessages(
                 (previousMessages) => [
                     ...previousMessages,
@@ -187,9 +275,7 @@ function Chat() {
                 ]
             );
 
-
-            // Send saved message
-            // to the other user
+            // Send saved message to other user
             socket.emit(
                 "sendMessage",
                 {
@@ -198,242 +284,84 @@ function Chat() {
                 }
             );
 
-
             // Clear input
             setMessageText("");
-
         } catch (error) {
-
             console.log(
                 "Send message error:",
                 error
             );
 
-
             alert(
                 error.response?.data ||
                 "Unable to send message"
             );
-
         }
-
     };
-
-
-    // CONNECT TO SOCKET.IO
-    useEffect(() => {
-
-        const socket = io(
-            import.meta.env.VITE_API_URL || "http://localhost:5000"
-        );
-
-        setSocket(newSocket);
-
-
-        return () => {
-
-            newSocket.disconnect();
-
-        };
-
-    }, []);
-
-
-    // LOAD CHAT DATA
-    useEffect(() => {
-
-        fetchChatData();
-
-    }, [swapRequestId]);
-
-
-    // JOIN SOCKET.IO ROOM
-    useEffect(() => {
-
-        if (!socket || !swapRequest) {
-            return;
-        }
-
-
-        const token =
-            localStorage.getItem("token");
-
-
-        if (!token) {
-            return;
-        }
-
-
-        const payload =
-            JSON.parse(
-                atob(token.split(".")[1])
-            );
-
-
-        const userId = payload.userId;
-
-
-        socket.emit(
-            "joinSwapRoom",
-            swapRequestId,
-            userId
-        );
-
-
-        console.log(
-            "Joined room:",
-            swapRequestId
-        );
-
-
-    }, [
-        socket,
-        swapRequest,
-        swapRequestId
-    ]);
-
-
-    // RECEIVE REAL-TIME MESSAGE
-    useEffect(() => {
-
-        if (!socket) {
-            return;
-        }
-
-
-        const handleReceiveMessage =
-            (data) => {
-
-                console.log(
-                    "New message received:",
-                    data
-                );
-
-
-                setMessages(
-                    (previousMessages) => [
-
-                        ...previousMessages,
-
-                        data.message
-
-                    ]
-                );
-
-            };
-
-
-        socket.on(
-            "receiveMessage",
-            handleReceiveMessage
-        );
-
-
-        return () => {
-
-            socket.off(
-                "receiveMessage",
-                handleReceiveMessage
-            );
-
-        };
-
-
-    }, [socket]);
-
 
     // AUTO SCROLL TO NEWEST MESSAGE
     useEffect(() => {
-
         messagesEndRef.current?.scrollIntoView({
             behavior: "smooth"
         });
-
     }, [messages]);
-
 
     // LOADING SCREEN
     if (loading) {
-
         return (
-
             <div className="min-h-screen flex items-center justify-center">
-
                 <p>
                     Loading chat...
                 </p>
-
             </div>
-
         );
-
     }
-
 
     // REQUEST NOT FOUND
     if (!swapRequest) {
-
         return (
-
             <div className="min-h-screen flex items-center justify-center">
-
                 <p>
                     Swap request not found.
                 </p>
-
             </div>
-
         );
-
     }
 
-
     return (
-
         <main className="min-h-screen bg-stone-50 py-10 px-6">
-
             <div className="max-w-3xl mx-auto">
 
-
                 {/* HEADER */}
-
                 <h1 className="text-3xl font-bold text-gray-900">
                     Chat
                 </h1>
-
 
                 <p className="text-gray-500 mt-2">
                     Swap Request ID: {swapRequestId}
                 </p>
 
-
-
                 {/* SWAP INFORMATION */}
-
                 <div className="bg-white border border-stone-200 rounded-2xl p-5 mt-6">
 
                     <p className="font-semibold text-gray-900">
                         Swap Request Information
                     </p>
 
-
                     <p className="text-sm text-gray-500 mt-3">
                         Requester:{" "}
                         {swapRequest.requester?.name}
                     </p>
-
 
                     <p className="text-sm text-gray-500">
                         Wanted Item:{" "}
                         {swapRequest.listing?.title}
                     </p>
 
-
                     <p className="text-sm text-gray-500">
                         Offered Item:{" "}
                         {swapRequest.offeredListing?.title}
                     </p>
-
 
                     <p className="text-sm text-gray-500">
                         Status:{" "}
@@ -442,43 +370,27 @@ function Chat() {
 
                 </div>
 
-
-
                 {/* CHAT BOX */}
-
                 <div className="bg-white border border-stone-200 rounded-2xl p-6 mt-6">
 
-
                     {/* MESSAGES */}
-
                     <div className="min-h-[300px] max-h-[500px] overflow-y-auto pr-2">
 
-
                         {messages.length === 0 ? (
-
                             <p className="text-gray-500 text-center py-20">
-
                                 No messages yet.
-
                             </p>
-
                         ) : (
-
                             messages.map((message) => {
-
-
                                 const senderId =
                                     message.sender?._id ||
                                     message.sender;
-
 
                                 const isMine =
                                     senderId?.toString() ===
                                     currentUserId?.toString();
 
-
                                 return (
-
                                     <div
                                         key={message._id}
                                         className={`flex mb-4 ${
@@ -488,7 +400,6 @@ function Chat() {
                                         }`}
                                     >
 
-
                                         <div
                                             className={`max-w-[75%] px-4 py-3 rounded-2xl ${
                                                 isMine
@@ -497,49 +408,31 @@ function Chat() {
                                             }`}
                                         >
 
-
                                             {!isMine && (
-
                                                 <p className="text-xs font-semibold mb-1 text-gray-500">
-
                                                     {message.sender?.name ||
                                                         "User"}
-
                                                 </p>
-
                                             )}
 
-
                                             <p className="text-sm">
-
                                                 {message.message}
-
                                             </p>
-
 
                                         </div>
 
                                     </div>
-
                                 );
-
                             })
-
                         )}
 
-
                         {/* SCROLL TARGET */}
-
                         <div ref={messagesEndRef} />
 
                     </div>
 
-
-
                     {/* MESSAGE INPUT */}
-
                     <div className="mt-6 flex gap-3">
-
 
                         <input
                             type="text"
@@ -550,20 +443,13 @@ function Chat() {
                                 )
                             }
                             onKeyDown={(e) => {
-
-                                if (
-                                    e.key === "Enter"
-                                ) {
-
+                                if (e.key === "Enter") {
                                     sendMessage();
-
                                 }
-
                             }}
                             placeholder="Type your message..."
                             className="flex-1 px-4 py-3 border border-stone-300 rounded-xl outline-none focus:ring-2 focus:ring-green-600"
                         />
-
 
                         <button
                             onClick={sendMessage}
@@ -572,20 +458,13 @@ function Chat() {
                             Send
                         </button>
 
-
                     </div>
-
 
                 </div>
 
-
             </div>
-
         </main>
-
     );
-
 }
-
 
 export default Chat;
