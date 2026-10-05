@@ -10,6 +10,9 @@ import { Server } from "socket.io";
 import reportRoutes from "./routes/reportRoutes.js";
 import favoriteRoutes from "./routes/favoriteRoutes.js";
 import cors from "cors";
+import swapValueSettingRoutes from "./routes/swapValueSettingRoutes.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 const app = express();
 
@@ -28,6 +31,13 @@ app.use("/auth", authRoutes);
 app.use("/messages", messageRoutes);
 app.use("/reports", reportRoutes);
 app.use("/favorites", favoriteRoutes);
+app.use("/reviews", reviewRoutes);
+app.use("/admin", adminRoutes);
+
+app.use(
+    "/swapvalues",
+    swapValueSettingRoutes
+);
 
 
 
@@ -37,7 +47,12 @@ const server = app.listen(5000, () => {
 
 
 
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: "http://localhost:5173",
+        methods: ["GET", "POST"]
+    }
+});
 
 io.on("connection", (socket) => {
 
@@ -45,9 +60,12 @@ io.on("connection", (socket) => {
 
         const { swapRequestId, message } = data;
 
-        io.to(`swap_${swapRequestId}`).emit(
+        socket.to(`swap_${swapRequestId}`).emit(
             "receiveMessage",
-            data
+            {
+                swapRequestId,
+                message
+            }
         );
 
     });

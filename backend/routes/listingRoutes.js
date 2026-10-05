@@ -8,7 +8,8 @@ import {
     getItem,
     updateItem,
     deleteItem,
-    getMyListings
+    getMyListings,
+    getLocationMatches
 } from "../controllers/listingController.js";
 
 
@@ -23,9 +24,15 @@ router.post(
 );
 router.get("/", getItems);
 router.get("/my", authMiddleware, getMyListings);
+router.get(
+    "/matches",
+    authMiddleware,
+    getLocationMatches
+);
 router.get("/:id", getItem);
 router.put("/:id", authMiddleware, updateItem);
 router.delete("/:id", authMiddleware, deleteItem);
+
 
 
 export default router;

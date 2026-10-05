@@ -1,33 +1,40 @@
-import mongoose from "mongoose"
-import { FaDeaf } from "react-icons/fa";
+import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema(
+    {
+        name: {
+            type: String,
+            required: true
+        },
 
-    name: {
-        type: String,
-        required: true
-    },
-    email: {
-        type: String,
-        required: true,
-        uniique: true
-    },
-    password: {
-        type: String,
-        required: true
-    },
-    location: {
-        type: String,
-        required: true
-    },
+        email: {
+            type: String,
+            required: true,
+            unique: true
+        },
 
-    role: {
-        type: String,
-        enum: ["user", "admin"],
-        default: "user"
+        password: {
+            type: String,
+            required: true
+        },
+
+        location: {
+            type: String,
+            required: true
+        },
+
+        role: {
+            type: String,
+            enum: ["user", "admin"],
+            default: "user"
+        }
+    },
+    {
+        timestamps: true
     }
+);
 
-});
-
-
-export default mongoose.model("User", userSchema);
+export default mongoose.model(
+    "User",
+    userSchema
+);

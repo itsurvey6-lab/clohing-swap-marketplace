@@ -14,6 +14,8 @@ import SwapRequests from "./pages/SwapRequests";
 import Dashboard from "./pages/Dashboard";
 import Favorites from "./pages/Favorites";
 import ListingDetails from "./pages/ListingDetails";
+import Chat from "./pages/Chat";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   return (
@@ -27,6 +29,16 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/listings" element={<Listings />} />
+        
+        <Route
+          path="/chat/:swapRequestId"
+          element={
+            <ProtectedRoute>
+              <Chat />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/listings/:id"
           element={<ListingDetails />}
@@ -66,7 +78,16 @@ function App() {
             </ProtectedRoute>
           }
         />
-        
+
+        <Route
+          path="/admin"
+          element={
+              <ProtectedRoute>
+                  <AdminDashboard />
+              </ProtectedRoute>
+          }
+        />
+                
       </Routes>
 
     </BrowserRouter>

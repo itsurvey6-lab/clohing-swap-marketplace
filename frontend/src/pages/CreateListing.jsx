@@ -14,7 +14,6 @@ function CreateListing() {
   const [brand, setBrand] = useState("");
   const [size, setSize] = useState("");
   const [condition, setCondition] = useState("");
-  const [swapValue, setSwapValue] = useState("");
   const [location, setLocation] = useState("");
   const [image, setImage] = useState(null);
 
@@ -40,7 +39,6 @@ function CreateListing() {
     formData.append("brand", brand);
     formData.append("size", size);
     formData.append("condition", condition);
-    formData.append("swapValue", swapValue);
     formData.append("location", location);
     formData.append("image", image);
 
@@ -63,12 +61,11 @@ function CreateListing() {
       setBrand("");
       setSize("");
       setCondition("");
-      setSwapValue("");
       setLocation("");
       setImage(null);
 
       // Go to listings page
-      navigate("/listings");
+      navigate("/dashboard");
 
     } catch (error) {
 
@@ -312,82 +309,51 @@ function CreateListing() {
 
 
             {/* =========================
-                CONDITION + SWAP VALUE
+                CONDITION
             ========================== */}
 
-            <div className="grid md:grid-cols-2 gap-6 mt-6">
+            <div className="mt-6">
 
-              {/* CONDITION */}
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Condition
+              </label>
 
-              <div>
+              <select
+                value={condition}
+                onChange={(e) =>
+                  setCondition(e.target.value)
+                }
+                required
+                className="w-full border border-stone-300 rounded-xl px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition"
+              >
 
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Condition
-                </label>
+                <option value="">
+                  Select condition
+                </option>
 
-                <select
-                  value={condition}
-                  onChange={(e) =>
-                    setCondition(e.target.value)
-                  }
-                  required
-                  className="w-full border border-stone-300 rounded-xl px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition"
-                >
+                <option value="New">
+                  New
+                </option>
 
-                  <option value="">
-                    Select condition
-                  </option>
+                <option value="Like New">
+                  Like New
+                </option>
 
-                  <option value="New">
-                    New
-                  </option>
+                <option value="Good">
+                  Good
+                </option>
 
-                  <option value="Like New">
-                    Like New
-                  </option>
+                <option value="Fair">
+                  Fair
+                </option>
 
-                  <option value="Good">
-                    Good
-                  </option>
+              </select>
 
-                  <option value="Fair">
-                    Fair
-                  </option>
-
-                </select>
-
-              </div>
-
-
-              {/* SWAP VALUE */}
-
-              <div>
-
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Swap Value
-                </label>
-
-                <input
-                  type="number"
-                  min="1"
-                  value={swapValue}
-                  onChange={(e) =>
-                    setSwapValue(e.target.value)
-                  }
-                  placeholder="Example: 50"
-                  required
-                  className="w-full border border-stone-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition"
-                />
-
-                <p className="text-xs text-gray-400 mt-2">
-                  Enter the value you expect for the swap.
-                </p>
-
-              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                Swap value is automatically calculated based on category, brand, and condition.
+              </p>
 
             </div>
-
-
             {/* =========================
                 LOCATION
             ========================== */}
