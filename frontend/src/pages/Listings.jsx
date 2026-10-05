@@ -7,6 +7,7 @@ import SearchBar from "../components/listings/SearchBar";
 import ListingFilters from "../components/listings/ListingFilters";
 import ListingsGrid from "../components/listings/ListingsGrid";
 
+
 function Listings() {
 
   const [listings, setListings] = useState([]);

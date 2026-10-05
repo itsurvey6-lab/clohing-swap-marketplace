@@ -1,58 +1,68 @@
 import Listing from "../models/listing.js";
+import mongoose from "mongoose";
 import User from "../models/user.js";
 import calculateSwapValue from "../utils/swapValueCalculator.js";
 
+// Save uploaded image into MongoDB GridFS
+const uploadImageToGridFS = (file) => {
+    return new Promise((resolve, reject) => {
+        const bucket = new mongoose.mongo.GridFSBucket(
+            mongoose.connection.db,
+            {
+                bucketName: "listingImages"
+            }
+        );
+
+        const uploadStream = bucket.openUploadStream(
+            file.originalname,
+            {
+                contentType: file.mimetype
+            }
+        );
+
+        uploadStream.on("error", reject);
+
+        uploadStream.on("finish", () => {
+            resolve(uploadStream.id.toString());
+        });
+
+        uploadStream.end(file.buffer);
+    });
+};
+
 const createListing = async (req, res) => {
-
     try {
+        const { category, brand, condition } = req.body;
 
-        const {
-            category,
-            brand,
-            condition
-        } = req.body;
-
-
-        // Calculate swap value using database settings
         const swapValue = await calculateSwapValue({
             category,
             brand,
             condition
         });
 
+        let image = null;
+
+        // Store uploaded image in MongoDB GridFS
+        if (req.file) {
+            const fileId = await uploadImageToGridFS(req.file);
+            image = `gridfs:${fileId}`;
+        }
 
         const listing = new Listing({
-
             ...req.body,
-
-            image: req.file
-                ? req.file.filename
-                : null,
-
+            image,
             owner: req.user.userId,
-
             swapValue
-
         });
-
 
         await listing.save();
 
         res.status(201).json(listing);
-
-
     } catch (error) {
-
-        console.log(error);
-
-        res.status(500).send(
-            "Unable to create listing"
-        );
-
+        console.log("Create listing error:", error);
+        res.status(500).send("Unable to create listing");
     }
-
 };
-
 
 const getItems = async (req, res) => {
 
@@ -460,6 +470,56 @@ const getLocationMatches = async (req, res) => {
 
 };
 
+// Get an image from MongoDB GridFS
+const getListingImage = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).send("Invalid image ID");
+        }
+
+        const fileId = new mongoose.Types.ObjectId(id);
+
+        const bucket = new mongoose.mongo.GridFSBucket(
+            mongoose.connection.db,
+            {
+                bucketName: "listingImages"
+            }
+        );
+
+        const files = await bucket
+            .find({ _id: fileId })
+            .toArray();
+
+        if (!files.length) {
+            return res.status(404).send("Image not found");
+        }
+
+        const file = files[0];
+
+        res.set(
+            "Content-Type",
+            file.contentType || "image/jpeg"
+        );
+
+        bucket
+            .openDownloadStream(fileId)
+            .on("error", (error) => {
+                console.log("Image stream error:", error);
+
+                if (!res.headersSent) {
+                    res.status(500).end();
+                }
+            })
+            .pipe(res);
+
+    } catch (error) {
+        console.log("Get listing image error:", error);
+        res.status(500).send("Unable to load image");
+    }
+};
+
 export {
     createListing,
     getItems,
@@ -467,5 +527,6 @@ export {
     updateItem,
     deleteItem,
     getMyListings,
-    getLocationMatches
+    getLocationMatches,
+    getListingImage
 };

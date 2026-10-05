@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 
 import api from "../services/api";
+import getImageUrl from "../utils/imageUrl";
 
 function Dashboard() {
 
@@ -656,19 +657,15 @@ function Dashboard() {
 
 
                     {item.image ? (
-
                       <img
-                        src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/uploads/${item.image}`}
+                        src={getImageUrl(item.image)}
                         alt={item.title}
-                        className="w-full h-64 object-cover"
+                        className="w-full h-64 object-contain bg-stone-100"
                       />
-
                     ) : (
-
                       <div className="w-full h-64 bg-stone-100 flex items-center justify-center text-gray-400">
                         No image
                       </div>
-
                     )}
 
 

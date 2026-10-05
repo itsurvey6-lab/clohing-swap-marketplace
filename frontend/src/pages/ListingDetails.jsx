@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
+import getImageUrl from "../utils/imageUrl";
 
 import api from "../services/api";
 
@@ -152,7 +153,7 @@ function ListingDetails() {
 
             {listing.image ? (
               <img
-                src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/uploads/${listing.image}`}
+                src={getImageUrl(listing.image)}
                 alt={listing.title}
                 className="w-full h-[600px] object-contain bg-stone-100"
               />

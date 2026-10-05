@@ -1,9 +1,9 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import api from "../services/api";
+import getImageUrl from "../utils/imageUrl";
 
 function ListingCard({ item }) {
   const navigate = useNavigate();
@@ -82,7 +82,7 @@ function ListingCard({ item }) {
 
         {item.image ? (
           <img
-            src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/uploads/${item.image}`}
+            src={getImageUrl(item.image)}
             alt={item.title}
             className="w-full h-full object-contain group-hover:scale-105 transition duration-500"
           />
