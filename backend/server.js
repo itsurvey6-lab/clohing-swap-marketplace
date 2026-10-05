@@ -16,10 +16,18 @@ import adminRoutes from "./routes/adminRoutes.js";
 
 const app = express();
 
+// Render provides the PORT automatically.
+// 5000 is used when running locally.
+const PORT = process.env.PORT || 5000;
+
+// Frontend URL
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
+
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
+
 app.use(cors({
-    origin: "http://localhost:5173"
+    origin: CLIENT_URL
 }));
 
 connectDB();
@@ -39,17 +47,15 @@ app.use(
     swapValueSettingRoutes
 );
 
-
-
-const server = app.listen(5000, () => {
-    console.log("server is running on port 5000");
+// Start server
+const server = app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
 
-
-
+// Socket.IO
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173",
+        origin: CLIENT_URL,
         methods: ["GET", "POST"]
     }
 });
