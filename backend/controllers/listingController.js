@@ -3,9 +3,15 @@ import mongoose from "mongoose";
 import User from "../models/user.js";
 import calculateSwapValue from "../utils/swapValueCalculator.js";
 
-// Save uploaded image into MongoDB GridFS
+
+// =====================================================
+// SAVE IMAGE TO MONGODB GRIDFS
+// =====================================================
+
 const uploadImageToGridFS = (file) => {
+
     return new Promise((resolve, reject) => {
+
         const bucket = new mongoose.mongo.GridFSBucket(
             mongoose.connection.db,
             {
@@ -13,56 +19,145 @@ const uploadImageToGridFS = (file) => {
             }
         );
 
-        const uploadStream = bucket.openUploadStream(
-            file.originalname,
-            {
-                contentType: file.mimetype
+        const uploadStream =
+            bucket.openUploadStream(
+                file.originalname,
+                {
+                    contentType: file.mimetype
+                }
+            );
+
+        uploadStream.on(
+            "error",
+            reject
+        );
+
+        uploadStream.on(
+            "finish",
+            () => {
+                resolve(
+                    uploadStream.id.toString()
+                );
             }
         );
 
-        uploadStream.on("error", reject);
+        uploadStream.end(
+            file.buffer
+        );
 
-        uploadStream.on("finish", () => {
-            resolve(uploadStream.id.toString());
-        });
-
-        uploadStream.end(file.buffer);
     });
+
 };
 
-const createListing = async (req, res) => {
-    try {
-        const { category, brand, condition } = req.body;
 
-        const swapValue = await calculateSwapValue({
+// =====================================================
+// CREATE LISTING
+// =====================================================
+
+const createListing = async (req, res) => {
+
+    try {
+
+        const {
             category,
             brand,
             condition
-        });
+        } = req.body;
+
+
+        // Calculate swap value
+        const swapValue =
+            await calculateSwapValue({
+                category,
+                brand,
+                condition
+            });
+
 
         let image = null;
 
-        // Store uploaded image in MongoDB GridFS
-        if (req.file) {
-            const fileId = await uploadImageToGridFS(req.file);
-            image = `gridfs:${fileId}`;
+        let images = [];
+
+
+        // =================================================
+        // SAVE MULTIPLE IMAGES
+        // =================================================
+
+        if (
+            req.files &&
+            req.files.length > 0
+        ) {
+
+            for (
+                const file of req.files
+            ) {
+
+                const fileId =
+                    await uploadImageToGridFS(
+                        file
+                    );
+
+                images.push(
+                    `gridfs:${fileId}`
+                );
+
+            }
+
+
+            // First image = main image
+            image = images[0];
+
         }
 
-        const listing = new Listing({
-            ...req.body,
-            image,
-            owner: req.user.userId,
-            swapValue
-        });
+
+        // =================================================
+        // CREATE LISTING
+        // =================================================
+
+        const listing =
+            new Listing({
+
+                ...req.body,
+
+                image,
+
+                images,
+
+                owner:
+                    req.user.userId,
+
+                swapValue
+
+            });
+
 
         await listing.save();
 
-        res.status(201).json(listing);
+
+        res.status(201).json(
+            listing
+        );
+
+
     } catch (error) {
-        console.log("Create listing error:", error);
-        res.status(500).send("Unable to create listing");
+
+        console.log(
+            "Create listing error:",
+            error
+        );
+
+        res.status(500).send(
+            "Unable to create listing"
+        );
+
     }
+
 };
+
+
+// =====================================================
+// GET ALL LISTINGS
+// =====================================================
 
 const getItems = async (req, res) => {
 
@@ -72,36 +167,45 @@ const getItems = async (req, res) => {
 
 
         if (req.query.category) {
-            filter.category = req.query.category;
+            filter.category =
+                req.query.category;
         }
 
 
         if (req.query.brand) {
-            filter.brand = req.query.brand;
+            filter.brand =
+                req.query.brand;
         }
 
 
         if (req.query.size) {
-            filter.size = req.query.size;
+            filter.size =
+                req.query.size;
         }
 
 
         if (req.query.location) {
-            filter.location = req.query.location;
+            filter.location =
+                req.query.location;
         }
 
 
         if (req.query.condition) {
-            filter.condition = req.query.condition;
+            filter.condition =
+                req.query.condition;
         }
 
 
         if (req.query.status) {
-            filter.status = req.query.status;
+            filter.status =
+                req.query.status;
         }
 
 
-        if (req.query.minValue || req.query.maxValue) {
+        if (
+            req.query.minValue ||
+            req.query.maxValue
+        ) {
 
             filter.swapValue = {};
 
@@ -109,7 +213,9 @@ const getItems = async (req, res) => {
             if (req.query.minValue) {
 
                 filter.swapValue.$gte =
-                    Number(req.query.minValue);
+                    Number(
+                        req.query.minValue
+                    );
 
             }
 
@@ -117,17 +223,22 @@ const getItems = async (req, res) => {
             if (req.query.maxValue) {
 
                 filter.swapValue.$lte =
-                    Number(req.query.maxValue);
+                    Number(
+                        req.query.maxValue
+                    );
 
             }
 
         }
 
 
-        let query = Listing.find(filter);
+        let query =
+            Listing.find(filter);
 
 
-        if (req.query.sort === "low") {
+        if (
+            req.query.sort === "low"
+        ) {
 
             query = query.sort({
                 swapValue: 1
@@ -136,7 +247,9 @@ const getItems = async (req, res) => {
         }
 
 
-        if (req.query.sort === "high") {
+        if (
+            req.query.sort === "high"
+        ) {
 
             query = query.sort({
                 swapValue: -1
@@ -147,14 +260,18 @@ const getItems = async (req, res) => {
 
         const page =
             Math.max(
-                Number(req.query.page) || 1,
+                Number(
+                    req.query.page
+                ) || 1,
                 1
             );
 
 
         const limit =
             Math.max(
-                Number(req.query.limit) || 5,
+                Number(
+                    req.query.limit
+                ) || 5,
                 1
             );
 
@@ -164,11 +281,15 @@ const getItems = async (req, res) => {
 
 
         const total =
-            await Listing.countDocuments(filter);
+            await Listing.countDocuments(
+                filter
+            );
 
 
         const totalPages =
-            Math.ceil(total / limit);
+            Math.ceil(
+                total / limit
+            );
 
 
         const items =
@@ -180,9 +301,13 @@ const getItems = async (req, res) => {
         res.json({
 
             total,
+
             page,
+
             limit,
+
             totalPages,
+
             items
 
         });
@@ -200,6 +325,10 @@ const getItems = async (req, res) => {
 
 };
 
+
+// =====================================================
+// GET SINGLE LISTING
+// =====================================================
 
 const getItem = async (req, res) => {
 
@@ -236,6 +365,10 @@ const getItem = async (req, res) => {
 };
 
 
+// =====================================================
+// UPDATE LISTING
+// =====================================================
+
 const updateItem = async (req, res) => {
 
     try {
@@ -256,8 +389,8 @@ const updateItem = async (req, res) => {
 
 
         if (
-            item.owner.toString()
-            !== req.user.userId
+            item.owner.toString() !==
+            req.user.userId
         ) {
 
             return res.status(403).send(
@@ -274,21 +407,26 @@ const updateItem = async (req, res) => {
 
 
         // Recalculate swap value
-        // when calculator fields change
         if (
-            req.body.category !== undefined ||
-            req.body.brand !== undefined ||
-            req.body.condition !== undefined
+            req.body.category !==
+                undefined ||
+            req.body.brand !==
+                undefined ||
+            req.body.condition !==
+                undefined
         ) {
 
             item.swapValue =
                 await calculateSwapValue({
 
-                    category: item.category,
+                    category:
+                        item.category,
 
-                    brand: item.brand,
+                    brand:
+                        item.brand,
 
-                    condition: item.condition
+                    condition:
+                        item.condition
 
                 });
 
@@ -314,6 +452,10 @@ const updateItem = async (req, res) => {
 };
 
 
+// =====================================================
+// DELETE LISTING
+// =====================================================
+
 const deleteItem = async (req, res) => {
 
     try {
@@ -334,8 +476,8 @@ const deleteItem = async (req, res) => {
 
 
         if (
-            item.owner.toString()
-            !== req.user.userId
+            item.owner.toString() !==
+            req.user.userId
         ) {
 
             return res.status(403).send(
@@ -350,7 +492,9 @@ const deleteItem = async (req, res) => {
         );
 
 
-        res.send("Item Deleted");
+        res.send(
+            "Item Deleted"
+        );
 
 
     } catch (error) {
@@ -366,13 +510,18 @@ const deleteItem = async (req, res) => {
 };
 
 
+// =====================================================
+// MY LISTINGS
+// =====================================================
+
 const getMyListings = async (req, res) => {
 
     try {
 
         const listings =
             await Listing.find({
-                owner: req.user.userId
+                owner:
+                    req.user.userId
             });
 
 
@@ -392,14 +541,22 @@ const getMyListings = async (req, res) => {
 };
 
 
-const getLocationMatches = async (req, res) => {
+// =====================================================
+// LOCATION MATCHES
+// =====================================================
+
+const getLocationMatches = async (
+    req,
+    res
+) => {
 
     try {
 
-        // Get logged-in user's location
-        const user = await User.findById(
-            req.user.userId
-        );
+        const user =
+            await User.findById(
+                req.user.userId
+            );
+
 
         if (!user) {
 
@@ -410,37 +567,52 @@ const getLocationMatches = async (req, res) => {
         }
 
 
-        const userLocation = user.location;
+        const userLocation =
+            user.location;
 
 
-        // Get listings from same location first
         const matchingListings =
             await Listing.find({
-                location: userLocation,
-                status: "available",
+
+                location:
+                    userLocation,
+
+                status:
+                    "available",
+
                 owner: {
-                    $ne: req.user.userId
+                    $ne:
+                        req.user.userId
                 }
+
             });
 
 
-        // Get listings from other locations
         const otherListings =
             await Listing.find({
+
                 location: {
-                    $ne: userLocation
+                    $ne:
+                        userLocation
                 },
-                status: "available",
+
+                status:
+                    "available",
+
                 owner: {
-                    $ne: req.user.userId
+                    $ne:
+                        req.user.userId
                 }
+
             });
 
 
-        // Same-location listings first
         const listings = [
+
             ...matchingListings,
+
             ...otherListings
+
         ];
 
 
@@ -448,7 +620,8 @@ const getLocationMatches = async (req, res) => {
 
             userLocation,
 
-            total: listings.length,
+            total:
+                listings.length,
 
             matchingCount:
                 matchingListings.length,
@@ -470,63 +643,151 @@ const getLocationMatches = async (req, res) => {
 
 };
 
-// Get an image from MongoDB GridFS
-const getListingImage = async (req, res) => {
+
+// =====================================================
+// GET GRIDFS IMAGE
+// =====================================================
+
+const getListingImage = async (
+    req,
+    res
+) => {
+
     try {
-        const { id } = req.params;
 
-        if (!mongoose.isValidObjectId(id)) {
-            return res.status(400).send("Invalid image ID");
+        const {
+            id
+        } = req.params;
+
+
+        if (
+            !mongoose.isValidObjectId(id)
+        ) {
+
+            return res.status(400).send(
+                "Invalid image ID"
+            );
+
         }
 
-        const fileId = new mongoose.Types.ObjectId(id);
 
-        const bucket = new mongoose.mongo.GridFSBucket(
-            mongoose.connection.db,
-            {
-                bucketName: "listingImages"
-            }
-        );
+        const fileId =
+            new mongoose.Types.ObjectId(
+                id
+            );
 
-        const files = await bucket
-            .find({ _id: fileId })
-            .toArray();
 
-        if (!files.length) {
-            return res.status(404).send("Image not found");
+        const bucket =
+            new mongoose.mongo.GridFSBucket(
+                mongoose.connection.db,
+                {
+                    bucketName:
+                        "listingImages"
+                }
+            );
+
+
+        const files =
+            await bucket
+                .find({
+                    _id:
+                        fileId
+                })
+                .toArray();
+
+
+        if (
+            !files.length
+        ) {
+
+            return res.status(404).send(
+                "Image not found"
+            );
+
         }
 
-        const file = files[0];
+
+        const file =
+            files[0];
+
 
         res.set(
             "Content-Type",
-            file.contentType || "image/jpeg"
+            file.contentType ||
+            "image/jpeg"
         );
 
-        bucket
-            .openDownloadStream(fileId)
-            .on("error", (error) => {
-                console.log("Image stream error:", error);
 
-                if (!res.headersSent) {
-                    res.status(500).end();
+        res.set(
+            "Cache-Control",
+            "public, max-age=31536000"
+        );
+
+
+        bucket
+            .openDownloadStream(
+                fileId
+            )
+            .on(
+                "error",
+                (error) => {
+
+                    console.log(
+                        "Image stream error:",
+                        error
+                    );
+
+                    if (
+                        !res.headersSent
+                    ) {
+
+                        res.status(
+                            500
+                        ).end();
+
+                    }
+
                 }
-            })
+            )
             .pipe(res);
 
+
     } catch (error) {
-        console.log("Get listing image error:", error);
-        res.status(500).send("Unable to load image");
+
+        console.log(
+            "Get listing image error:",
+            error
+        );
+
+        res.status(500).send(
+            "Unable to load image"
+        );
+
     }
+
 };
 
+
+// =====================================================
+// EXPORT
+// =====================================================
+
 export {
+
     createListing,
+
     getItems,
+
     getItem,
+
     updateItem,
+
     deleteItem,
+
     getMyListings,
+
     getLocationMatches,
+
     getListingImage
+
 };

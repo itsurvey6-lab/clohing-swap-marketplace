@@ -1,5 +1,7 @@
 import express from "express";
+
 import authMiddleware from "../middleware/authMiddleware.js";
+
 import upload from "../middleware/uploadMiddleware.js";
 
 import {
@@ -13,18 +15,47 @@ import {
     getListingImage
 } from "../controllers/listingController.js";
 
+
 const router = express.Router();
+
+
+// =====================================================
+// CREATE LISTING
+// Up to 6 images
+// =====================================================
 
 router.post(
     "/",
     authMiddleware,
-    upload.single("image"),
+    upload.array("image", 6),
     createListing
 );
 
-router.get("/", getItems);
 
-router.get("/my", authMiddleware, getMyListings);
+// =====================================================
+// LISTINGS
+// =====================================================
+
+router.get(
+    "/",
+    getItems
+);
+
+
+// =====================================================
+// MY LISTINGS
+// =====================================================
+
+router.get(
+    "/my",
+    authMiddleware,
+    getMyListings
+);
+
+
+// =====================================================
+// LOCATION MATCHES
+// =====================================================
 
 router.get(
     "/matches",
@@ -32,13 +63,48 @@ router.get(
     getLocationMatches
 );
 
-// IMPORTANT: keep this BEFORE /:id
-router.get("/image/:id", getListingImage);
 
-router.get("/:id", getItem);
+// =====================================================
+// GRIDFS IMAGE
+// IMPORTANT: before /:id
+// =====================================================
 
-router.put("/:id", authMiddleware, updateItem);
+router.get(
+    "/image/:id",
+    getListingImage
+);
 
-router.delete("/:id", authMiddleware, deleteItem);
+
+// =====================================================
+// SINGLE LISTING
+// =====================================================
+
+router.get(
+    "/:id",
+    getItem
+);
+
+
+// =====================================================
+// UPDATE
+// =====================================================
+
+router.put(
+    "/:id",
+    authMiddleware,
+    updateItem
+);
+
+
+// =====================================================
+// DELETE
+// =====================================================
+
+router.delete(
+    "/:id",
+    authMiddleware,
+    deleteItem
+);
+
 
 export default router;

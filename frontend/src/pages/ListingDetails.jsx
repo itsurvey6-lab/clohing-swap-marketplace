@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import getImageUrl from "../utils/imageUrl";
 
 import api from "../services/api";
+import { getImageUrls } from "../utils/imageUrl";
 
 function ListingDetails() {
   const { id } = useParams();
@@ -18,7 +18,10 @@ function ListingDetails() {
 
   const [requestLoading, setRequestLoading] = useState(false);
 
-  // Get the selected listing
+  // =====================================================
+  // LOAD LISTING
+  // =====================================================
+
   useEffect(() => {
     const fetchListing = async () => {
       try {
@@ -40,7 +43,10 @@ function ListingDetails() {
     fetchListing();
   }, [id]);
 
-  // Get my listings for the swap offer
+  // =====================================================
+  // LOAD MY LISTINGS
+  // =====================================================
+
   useEffect(() => {
     const fetchMyListings = async () => {
       const token = localStorage.getItem("token");
@@ -52,7 +58,11 @@ function ListingDetails() {
       try {
         const response = await api.get("/listings/my");
 
-        setMyListings(response.data.items || response.data || []);
+        setMyListings(
+          response.data.items ||
+          response.data ||
+          []
+        );
       } catch (error) {
         console.log("My listings error:", error);
       }
@@ -60,6 +70,10 @@ function ListingDetails() {
 
     fetchMyListings();
   }, []);
+
+  // =====================================================
+  // SEND SWAP REQUEST
+  // =====================================================
 
   const handleSwapRequest = async () => {
     if (!selectedListing) {
@@ -78,7 +92,6 @@ function ListingDetails() {
       alert("Swap request sent successfully!");
 
       navigate("/swap-requests");
-
     } catch (error) {
       console.log(error);
 
@@ -91,6 +104,10 @@ function ListingDetails() {
     }
   };
 
+  // =====================================================
+  // LOADING
+  // =====================================================
+
   if (loading) {
     return (
       <main className="min-h-screen bg-stone-50 flex items-center justify-center">
@@ -100,6 +117,10 @@ function ListingDetails() {
       </main>
     );
   }
+
+  // =====================================================
+  // ERROR
+  // =====================================================
 
   if (error || !listing) {
     return (
@@ -120,57 +141,122 @@ function ListingDetails() {
     );
   }
 
+  // =====================================================
+  // IMAGE LIST
+  // =====================================================
+
+  const imageUrls = getImageUrls(listing);
+
   return (
     <main className="min-h-screen bg-stone-50">
 
-      {/* Back button */}
+      {/* =================================================
+          BACK BUTTON
+      ================================================= */}
 
       <div className="max-w-7xl mx-auto px-6 pt-8">
-
         <button
           onClick={() => navigate("/listings")}
           className="text-sm text-gray-500 hover:text-gray-900 transition"
         >
           ← Back to listings
         </button>
-
       </div>
 
-      {/* Details */}
+      {/* =================================================
+          DETAILS
+      ================================================= */}
 
       <section className="max-w-7xl mx-auto px-6 py-10">
 
         <div className="grid lg:grid-cols-2 gap-12 items-start">
 
-          {/* IMAGE */}
+          {/* =================================================
+              IMAGE GALLERY
+          ================================================= */}
 
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="bg-white rounded-3xl overflow-hidden border border-stone-200"
+            initial={{
+              opacity: 0,
+              x: -30
+            }}
+            animate={{
+              opacity: 1,
+              x: 0
+            }}
+            transition={{
+              duration: 0.5
+            }}
+            className="bg-white rounded-3xl overflow-hidden border border-stone-200 p-4"
           >
 
-            {listing.image ? (
-              <img
-                src={getImageUrl(listing.image)}
-                alt={listing.title}
-                className="w-full h-[600px] object-contain bg-stone-100"
-              />
+            {imageUrls.length > 0 ? (
+
+              <div className="space-y-4">
+
+                {/* MAIN IMAGE */}
+
+                <div className="w-full h-[500px] bg-stone-100 rounded-2xl overflow-hidden flex items-center justify-center">
+
+                  <img
+                    src={imageUrls[0]}
+                    alt={listing.title}
+                    className="w-full h-full object-contain"
+                  />
+
+                </div>
+
+                {/* THUMBNAILS */}
+
+                {imageUrls.length > 1 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+
+                    {imageUrls.map(
+                      (url, index) => (
+                        <div
+                          key={`${url}-${index}`}
+                          className="h-28 bg-stone-100 rounded-xl overflow-hidden border border-stone-200"
+                        >
+                          <img
+                            src={url}
+                            alt={`${listing.title} ${index + 1}`}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      )
+                    )}
+
+                  </div>
+                )}
+
+              </div>
+
             ) : (
+
               <div className="w-full h-[600px] bg-stone-100 flex items-center justify-center text-gray-400">
                 No image available
               </div>
+
             )}
 
           </motion.div>
 
-          {/* INFORMATION */}
+          {/* =================================================
+              INFORMATION
+          ================================================= */}
 
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
+            initial={{
+              opacity: 0,
+              x: 30
+            }}
+            animate={{
+              opacity: 1,
+              x: 0
+            }}
+            transition={{
+              duration: 0.5
+            }}
           >
 
             <p className="text-sm uppercase tracking-[0.2em] text-green-700 font-semibold">
@@ -185,7 +271,7 @@ function ListingDetails() {
               {listing.brand}
             </p>
 
-            {/* Swap value */}
+            {/* SWAP VALUE */}
 
             <div className="mt-8 p-6 bg-white rounded-2xl border border-stone-200">
 
@@ -199,7 +285,7 @@ function ListingDetails() {
 
             </div>
 
-            {/* Details */}
+            {/* DETAILS */}
 
             <div className="grid grid-cols-2 gap-4 mt-6">
 
@@ -251,7 +337,9 @@ function ListingDetails() {
 
             </div>
 
-            {/* SWAP SECTION */}
+            {/* =================================================
+                SWAP SECTION
+            ================================================= */}
 
             {listing.status === "available" && (
               <div className="mt-8 bg-white rounded-3xl border border-stone-200 p-6">
@@ -269,26 +357,34 @@ function ListingDetails() {
                     <select
                       value={selectedListing}
                       onChange={(e) =>
-                        setSelectedListing(e.target.value)
+                        setSelectedListing(
+                          e.target.value
+                        )
                       }
                       className="w-full mt-5 border border-stone-200 rounded-xl px-4 py-3 outline-none focus:border-green-600"
                     >
+
                       <option value="">
                         Select an item to offer
                       </option>
 
                       {myListings
                         .filter(
-                          (item) => item._id !== listing._id
+                          (item) =>
+                            item._id !== listing._id
                         )
-                        .map((item) => (
-                          <option
-                            key={item._id}
-                            value={item._id}
-                          >
-                            {item.title} — {item.swapValue}
-                          </option>
-                        ))}
+                        .map(
+                          (item) => (
+                            <option
+                              key={item._id}
+                              value={item._id}
+                            >
+                              {item.title} —{" "}
+                              {item.swapValue}
+                            </option>
+                          )
+                        )}
+
                     </select>
 
                     <button
@@ -303,7 +399,9 @@ function ListingDetails() {
                   </>
                 ) : (
                   <button
-                    onClick={() => navigate("/login")}
+                    onClick={() =>
+                      navigate("/login")
+                    }
                     className="w-full mt-5 bg-gray-900 text-white py-3 rounded-full font-semibold hover:bg-gray-800 transition"
                   >
                     Login to Request Swap

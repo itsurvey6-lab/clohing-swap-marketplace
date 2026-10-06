@@ -1,21 +1,68 @@
-import multer from "multer";
+import mongoose from "mongoose";
 
-// Keep the uploaded image in memory temporarily.
-// We will save it into MongoDB in the controller.
-const storage = multer.memoryStorage();
+const listingSchema = new mongoose.Schema(
+    {
+        title: {
+            type: String,
+            required: true
+        },
 
-const upload = multer({
-    storage,
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5 MB
-    },
-    fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith("image/")) {
-            cb(null, true);
-        } else {
-            cb(new Error("Only image files are allowed"));
+        category: {
+            type: String,
+            required: true
+        },
+
+        brand: {
+            type: String,
+            required: true
+        },
+
+        size: {
+            type: String,
+            required: true
+        },
+
+        condition: {
+            type: String,
+            required: true
+        },
+
+        swapValue: {
+            type: Number,
+            required: true
+        },
+
+        location: {
+            type: String,
+            required: true
+        },
+
+        status: {
+            type: String,
+            default: "available"
+        },
+
+        // Main image
+        image: {
+            type: String
+        },
+
+        // All images
+        images: {
+            type: [String],
+            default: []
+        },
+
+        owner: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
         }
-    }
-});
+    },
 
-export default upload;
+    {
+        timestamps: true
+    }
+);
+
+export default mongoose.model("Listing", listingSchema);
