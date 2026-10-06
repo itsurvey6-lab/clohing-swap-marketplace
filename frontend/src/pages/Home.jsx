@@ -7,6 +7,8 @@ import FinalCTA from "../components/FinalCTA";
 function Home() {
   return (
     <main>
+      <title> Clothing-swap </title>
+
       <Hero />
 
       <CategorySection />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import getImageUrl from "../utils/imageUrl";
 
 import api from "../services/api";
 
@@ -157,7 +158,7 @@ function Favorites() {
 
                     {item.image ? (
                       <img
-                        src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/uploads/${item.image}`}
+                        src={getImageUrl(item.image)}
                         alt={item.title}
                         className="w-full h-80 object-contain bg-stone-100"
                       />
